@@ -55,7 +55,7 @@ async function resilientFetch(url, proxyUrl) {
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-            log.info(`Fetching ${url} (attempt ${attempt}/${MAX_RETRIES})`);
+            log.info(`Fetching data... (attempt ${attempt}/${MAX_RETRIES})`);
             const response = await gotScraping.get(url, {
                 headers,
                 proxyUrl,
@@ -68,9 +68,7 @@ async function resilientFetch(url, proxyUrl) {
                 response.statusCode === 403 &&
                 (response.body.includes('challenge-platform') || response.body.includes('cf-browser-verification'))
             ) {
-                log.warning(
-                    `Cloudflare challenge detected on ${url} (attempt ${attempt}). This page requires JS execution.`,
-                );
+                log.warning(`Cloudflare challenge detected (attempt ${attempt}). This page requires JS execution.`);
                 lastError = new Error('Cloudflare challenge block');
                 if (attempt < MAX_RETRIES) {
                     await sleep(RETRY_DELAY_MS * attempt);
@@ -79,8 +77,8 @@ async function resilientFetch(url, proxyUrl) {
             }
 
             if (response.statusCode >= 400) {
-                lastError = new Error(`HTTP ${response.statusCode} on ${url}: ${response.body.substring(0, 200)}`);
-                log.warning(`HTTP ${response.statusCode} on ${url} (attempt ${attempt})`);
+                lastError = new Error(`HTTP ${response.statusCode}: ${response.body.substring(0, 200)}`);
+                log.warning(`HTTP ${response.statusCode} (attempt ${attempt})`);
                 if (attempt < MAX_RETRIES) {
                     await sleep(RETRY_DELAY_MS * attempt);
                 }
@@ -98,7 +96,7 @@ async function resilientFetch(url, proxyUrl) {
     }
 
     // All retries exhausted — log diagnostic info
-    log.error(`All ${MAX_RETRIES} attempts failed for ${url}. Last error: ${lastError?.message || 'unknown'}`);
+    log.error(`All ${MAX_RETRIES} attempts failed. Last error: ${lastError?.message || 'unknown'}`);
     return null;
 }
 
@@ -245,20 +243,18 @@ async function main() {
         const startUrl = url && url.trim() ? url.trim() : DEFAULT_START_URL;
 
         const urlType = getUrlType(startUrl);
-        log.info(
-            `Starting Dice.fm scraper: url=${startUrl}, type=${urlType}, results_wanted=${RESULTS_WANTED}, max_pages=${MAX_PAGES}`,
-        );
+        log.info(`Starting Dice.fm scraper: type=${urlType}, results_wanted=${RESULTS_WANTED}, max_pages=${MAX_PAGES}`);
 
         // ─── Handle single event detail page ─────────────────────────
         if (urlType === 'EVENT') {
             const html = await resilientFetch(startUrl, proxyUrl);
             if (!html) {
-                log.error(`Failed to fetch event page: ${startUrl}`);
+                log.error(`Failed to fetch event page`);
                 return;
             }
             const nextData = extractNextData(html);
             if (!nextData) {
-                log.error(`No __NEXT_DATA__ found on ${startUrl}`);
+                log.error(`No __NEXT_DATA__ found on event page`);
                 return;
             }
             const event = extractSingleEvent(nextData);
@@ -314,13 +310,13 @@ async function main() {
 
             const html = await resilientFetch(currentUrl, proxyUrl);
             if (!html) {
-                log.error(`Failed to fetch page ${pageNo}: ${currentUrl}`);
+                log.error(`Failed to fetch page ${pageNo}`);
                 break;
             }
 
             const nextData = extractNextData(html);
             if (!nextData) {
-                log.error(`No __NEXT_DATA__ found on page ${pageNo}: ${currentUrl}`);
+                log.error(`No __NEXT_DATA__ found on page ${pageNo}`);
                 break;
             }
 
