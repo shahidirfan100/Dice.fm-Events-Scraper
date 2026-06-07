@@ -21,36 +21,7 @@ function sleep(ms) {
     });
 }
 
-// ─── Known city slugs for location-based browsing ──────────────────
-const KNOWN_CITIES = {
-    'new york': 'new_york-5bbf4db0f06331478e9b2c59',
-    'new york city': 'new_york-5bbf4db0f06331478e9b2c59',
-    nyc: 'new_york-5bbf4db0f06331478e9b2c59',
-    london: 'london-54d8a23438fe5d27d500001c',
-    berlin: 'berlin-5e426dbb749e68e3e923d1e4',
-    'los angeles': 'los_angeles-5bbf4db0f06331478e9b2c5a',
-    la: 'los_angeles-5bbf4db0f06331478e9b2c5a',
-    paris: 'paris-5e426dbb749e68e3e923d1e5',
-    amsterdam: 'amsterdam-5e426dbb749e68e3e923d1e6',
-    barcelona: 'barcelona-5e426dbb749e68e3e923d1e7',
-    lisbon: 'lisbon-5e426dbb749e68e3e923d1e8',
-    tokyo: 'tokyo-5e426dbb749e68e3e923d1e9',
-    sydney: 'sydney-5e426dbb749e68e3e923d1ea',
-    melbourne: 'melbourne-5e426dbb749e68e3e923d1eb',
-    chicago: 'chicago-5e426dbb749e68e3e923d1ec',
-    'san francisco': 'san_francisco-5e426dbb749e68e3e923d1ed',
-    miami: 'miami-5e426dbb749e68e3e923d1ee',
-    toronto: 'toronto-5e426dbb749e68e3e923d1ef',
-    'mexico city': 'mexico_city-5e426dbb749e68e3e923d1f0',
-    dublin: 'dublin-5e426dbb749e68e3e923d1f1',
-    manchester: 'manchester-5e426dbb749e68e3e923d1f2',
-    edinburgh: 'edinburgh-5e426dbb749e68e3e923d1f3',
-    glasgow: 'glasgow-5e426dbb749e68e3e923d1f4',
-    bristol: 'bristol-5e426dbb749e68e3e923d1f5',
-    brighton: 'brighton-5e426dbb749e68e3e923d1f6',
-};
-
-const DEFAULT_CITY_SLUG = 'new_york-5bbf4db0f06331478e9b2c59';
+const DEFAULT_START_URL = 'https://dice.fm/browse/new_york-5bbf4db0f06331478e9b2c59';
 
 // ─── Browser-like headers (mimic same-origin request from dice.fm) ─
 function buildHeaders(targetUrl) {
@@ -95,11 +66,10 @@ async function resilientFetch(url, proxyUrl) {
             // Detect Cloudflare block
             if (
                 response.statusCode === 403 &&
-                (response.body.includes('challenge-platform') ||
-                    response.body.includes('cf-browser-verification'))
+                (response.body.includes('challenge-platform') || response.body.includes('cf-browser-verification'))
             ) {
                 log.warning(
-                    `Cloudflare challenge detected on ${url} (attempt ${attempt}). This page requires JS execution.`
+                    `Cloudflare challenge detected on ${url} (attempt ${attempt}). This page requires JS execution.`,
                 );
                 lastError = new Error('Cloudflare challenge block');
                 if (attempt < MAX_RETRIES) {
@@ -109,9 +79,7 @@ async function resilientFetch(url, proxyUrl) {
             }
 
             if (response.statusCode >= 400) {
-                lastError = new Error(
-                    `HTTP ${response.statusCode} on ${url}: ${response.body.substring(0, 200)}`
-                );
+                lastError = new Error(`HTTP ${response.statusCode} on ${url}: ${response.body.substring(0, 200)}`);
                 log.warning(`HTTP ${response.statusCode} on ${url} (attempt ${attempt})`);
                 if (attempt < MAX_RETRIES) {
                     await sleep(RETRY_DELAY_MS * attempt);
@@ -130,63 +98,19 @@ async function resilientFetch(url, proxyUrl) {
     }
 
     // All retries exhausted — log diagnostic info
-    log.error(
-        `All ${MAX_RETRIES} attempts failed for ${url}. Last error: ${lastError?.message || 'unknown'}`
-    );
+    log.error(`All ${MAX_RETRIES} attempts failed for ${url}. Last error: ${lastError?.message || 'unknown'}`);
     return null;
 }
 
 // ─── __NEXT_DATA__ extraction from HTML ────────────────────────────
 function extractNextData(html) {
     if (!html) return null;
-    const match = html.match(
-        /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/
-    );
+    const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
     if (!match) return null;
     try {
         return JSON.parse(match[1]);
     } catch (err) {
         log.warning(`Failed to parse __NEXT_DATA__: ${err.message}`);
-        return null;
-    }
-}
-
-// ─── Places API: resolve city name → slug ──────────────────────────
-async function resolveCitySlug(cityName, proxyUrl) {
-    // Check known cities first (instant, no network)
-    const lower = cityName.toLowerCase().trim();
-    if (KNOWN_CITIES[lower]) {
-        log.info(`City "${cityName}" resolved from cache: ${KNOWN_CITIES[lower]}`);
-        return KNOWN_CITIES[lower];
-    }
-
-    // Query Places API
-    const apiUrl = `${DICE_API_ORIGIN}/places/search?types=city&query=${encodeURIComponent(cityName)}`;
-    const body = await resilientFetch(apiUrl, proxyUrl);
-    if (!body) return null;
-
-    try {
-        const data = JSON.parse(body);
-        const predictions = data?.predictions || [];
-        if (predictions.length === 0) {
-            log.warning(`No city found for "${cityName}" via Places API`);
-            return null;
-        }
-
-        // The Places API returns Mapbox-style predictions, not Dice.fm slugs directly
-        // We need to construct the slug from the prediction name
-        const prediction = predictions[0];
-        const cityNameSlug = prediction.name
-            .toLowerCase()
-            .replace(/\s+/g, '_')
-            .replace(/[^a-z0-9_-]/g, '');
-
-        // If it matches a known pattern, use it; otherwise try the browse URL
-        const slug = `${cityNameSlug}-${prediction.mapbox_id || prediction.id || ''}`;
-        log.info(`City "${cityName}" resolved via Places API: ${slug}`);
-        return slug;
-    } catch (err) {
-        log.warning(`Places API parse error: ${err.message}`);
         return null;
     }
 }
@@ -217,8 +141,7 @@ function formatDate(isoStr) {
 function mapEvent(ev, pageUrl) {
     if (!ev || !ev.name) return null;
     const venue = ev.venues?.[0];
-    const artists =
-        ev.summary_lineup?.top_artists?.map((a) => a.name).filter(Boolean) || [];
+    const artists = ev.summary_lineup?.top_artists?.map((a) => a.name).filter(Boolean) || [];
     const priceStr = formatPrice(ev.price);
     const ticketTypes =
         ev.ticket_types?.map((tt) => ({
@@ -244,20 +167,19 @@ function mapEvent(ev, pageUrl) {
         artists: artists.length ? artists : null,
         presented_by: ev.presented_by || null,
         category:
-            ev.tags_types?.map((t) => t.title).filter(Boolean).join(', ') || null,
+            ev.tags_types
+                ?.map((t) => t.title)
+                .filter(Boolean)
+                .join(', ') || null,
         image_url: ev.images?.square || null,
-        event_url: ev.perm_name
-            ? `https://dice.fm/event/${ev.perm_name}`
-            : pageUrl || null,
+        event_url: ev.perm_name ? `https://dice.fm/event/${ev.perm_name}` : pageUrl || null,
         ticket_types: ticketTypes.length ? ticketTypes : null,
         max_tickets: ev.max_tickets || null,
         description: ev.about?.description || null,
     };
 
     // Remove null/undefined/empty fields
-    return Object.fromEntries(
-        Object.entries(item).filter(([, v]) => v != null && v !== '')
-    );
+    return Object.fromEntries(Object.entries(item).filter(([, v]) => v != null && v !== ''));
 }
 
 // ─── URL type detection ────────────────────────────────────────────
@@ -304,64 +226,27 @@ async function main() {
         const input = (await Actor.getInput()) || {};
         const {
             url = '',
-            keyword = '',
-            location = '',
             results_wanted: RESULTS_WANTED_RAW = 20,
             max_pages: MAX_PAGES_RAW = 10,
             proxyConfiguration: proxyConfig,
         } = input;
 
-        const RESULTS_WANTED = Number.isFinite(+RESULTS_WANTED_RAW)
-            ? Math.max(1, +RESULTS_WANTED_RAW)
-            : 20;
-        const MAX_PAGES = Number.isFinite(+MAX_PAGES_RAW)
-            ? Math.max(1, +MAX_PAGES_RAW)
-            : 10;
+        const RESULTS_WANTED = Number.isFinite(+RESULTS_WANTED_RAW) ? Math.max(1, +RESULTS_WANTED_RAW) : 20;
+        const MAX_PAGES = Number.isFinite(+MAX_PAGES_RAW) ? Math.max(1, +MAX_PAGES_RAW) : 10;
 
-        const proxyConfiguration = proxyConfig
-            ? await Actor.createProxyConfiguration({ ...proxyConfig })
-            : undefined;
+        const proxyConfiguration = proxyConfig ? await Actor.createProxyConfiguration({ ...proxyConfig }) : undefined;
 
-        const proxyUrl = proxyConfiguration
-            ? await proxyConfiguration.newUrl()
-            : undefined;
+        const proxyUrl = proxyConfiguration ? await proxyConfiguration.newUrl() : undefined;
 
         let saved = 0;
         let pagesVisited = 0;
 
         // ─── Determine URL to scrape ─────────────────────────────────
-        let startUrl;
-        let keywordFilter = null;
-
-        if (url && url.trim()) {
-            startUrl = url.trim();
-        } else if (keyword && keyword.trim()) {
-            // Search pages are Cloudflare-blocked, so use browse + keyword filtering
-            keywordFilter = keyword.trim().toLowerCase();
-            log.info(
-                `Keyword "${keyword}" provided. Using browse page + local keyword filtering (search endpoint is Cloudflare-blocked).`
-            );
-            startUrl = `${DICE_ORIGIN}/browse/${DEFAULT_CITY_SLUG}`;
-        } else if (location && location.trim()) {
-            // Resolve location to city slug
-            const locTrimmed = location.trim();
-            // Check if it looks like a full slug already (contains dash + hex id)
-            if (/^[a-z_]+-[0-9a-f]{8,}$/i.test(locTrimmed)) {
-                startUrl = `${DICE_ORIGIN}/browse/${locTrimmed}`;
-            } else {
-                const slug = await resolveCitySlug(locTrimmed, proxyUrl);
-                startUrl = slug
-                    ? `${DICE_ORIGIN}/browse/${slug}`
-                    : `${DICE_ORIGIN}/browse/${DEFAULT_CITY_SLUG}`;
-            }
-        } else {
-            // Default: New York
-            startUrl = `${DICE_ORIGIN}/browse/${DEFAULT_CITY_SLUG}`;
-        }
+        const startUrl = url && url.trim() ? url.trim() : DEFAULT_START_URL;
 
         const urlType = getUrlType(startUrl);
         log.info(
-            `Starting Dice.fm scraper: url=${startUrl}, type=${urlType}, keyword=${keywordFilter || 'none'}, results_wanted=${RESULTS_WANTED}, max_pages=${MAX_PAGES}`
+            `Starting Dice.fm scraper: url=${startUrl}, type=${urlType}, results_wanted=${RESULTS_WANTED}, max_pages=${MAX_PAGES}`,
         );
 
         // ─── Handle single event detail page ─────────────────────────
@@ -394,13 +279,11 @@ async function main() {
             log.warning(
                 'Search URLs (/search) are Cloudflare-blocked when using got-scraping. ' +
                     'Use the keyword input field instead, or provide a browse/event URL. ' +
-                    'Attempting fetch anyway...'
+                    'Attempting fetch anyway...',
             );
             const html = await resilientFetch(startUrl, proxyUrl);
             if (!html) {
-                log.error(
-                    'Search page fetch failed. Please use keyword input or a browse URL instead.'
-                );
+                log.error('Search page fetch failed. Please use keyword input or a browse URL instead.');
                 return;
             }
             // If we got through, try to extract
@@ -452,25 +335,6 @@ async function main() {
             for (const ev of events) {
                 if (saved >= RESULTS_WANTED) break;
 
-                // Apply keyword filter if set
-                if (keywordFilter) {
-                    const searchText = [
-                        ev.name,
-                        ev.summary_lineup?.top_artists?.map((a) => a.name).join(' '),
-                        ev.tags_types?.map((t) => t.title).join(' '),
-                        ev.venues?.[0]?.name,
-                        ev.presented_by,
-                        ev.about?.description,
-                    ]
-                        .filter(Boolean)
-                        .join(' ')
-                        .toLowerCase();
-
-                    if (!searchText.includes(keywordFilter)) {
-                        continue; // Skip non-matching events
-                    }
-                }
-
                 const mapped = mapEvent(ev, currentUrl);
                 if (mapped && Object.keys(mapped).length > 0) {
                     await Dataset.pushData(mapped);
@@ -479,9 +343,7 @@ async function main() {
                 }
             }
 
-            log.info(
-                `Page ${pageNo}: found ${events.length} events, saved ${addedCount}${keywordFilter ? ` (keyword: "${keywordFilter}")` : ''} (total: ${saved})`
-            );
+            log.info(`Page ${pageNo}: found ${events.length} events, saved ${addedCount} (total: ${saved})`);
 
             // Stop if no cursor or we've reached the last page
             if (!nextCursor) {
@@ -495,15 +357,7 @@ async function main() {
             currentUrl = nextUrl.href;
         }
 
-        if (keywordFilter && saved === 0) {
-            log.warning(
-                `No events matched keyword "${keywordFilter}". Try a different keyword or browse without filtering.`
-            );
-        }
-
-        log.info(
-            `Finished. Saved ${saved} events from ${pagesVisited} pages${keywordFilter ? ` (filtered by "${keywordFilter}")` : ''}.`
-        );
+        log.info(`Finished. Saved ${saved} events from ${pagesVisited} pages.`);
     } finally {
         await Actor.exit();
     }

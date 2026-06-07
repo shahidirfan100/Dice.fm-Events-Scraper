@@ -17,32 +17,35 @@ Extract comprehensive event data from Dice.fm — the world's leading live event
 ## Use Cases
 
 ### Event Discovery & Research
+
 Discover upcoming events across cities and genres. Track which artists are performing, where, and when — ideal for music journalists, bloggers, and entertainment researchers building comprehensive event databases.
 
 ### Market Intelligence
+
 Analyze ticket pricing trends across venues, cities, and genres. Identify pricing patterns, premium vs. budget events, and market gaps for competitive positioning in the live events industry.
 
 ### Event Aggregation
+
 Build event listings for apps, websites, or newsletters. Automatically collect fresh event data to populate calendars, recommendation engines, or event comparison platforms.
 
 ### Trend Monitoring
+
 Track emerging artists, trending genres, and popular venues over time. Use structured event data to identify cultural trends and audience preferences across regions.
 
 ### Promoter & Venue Analysis
+
 Monitor event schedules for specific venues or promoters. Analyze event frequency, genre mix, and pricing strategies to understand competitive landscapes.
 
 ---
 
 ## Input Parameters
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `url` | String | No | — | Any Dice.fm URL (browse, event, artist, or venue page). Takes priority over keyword and location. |
-| `keyword` | String | No | — | Search keyword for events (artist name, genre, event name). Used when URL is not provided. |
-| `location` | String | No | — | City slug for browsing events (e.g., `new_york-5bbf4db0f06331478e9b2c59`). Used when URL and keyword are not provided. |
-| `results_wanted` | Integer | No | `100` | Maximum number of events to collect. |
-| `max_pages` | Integer | No | `10` | Maximum number of pages to visit for pagination. |
-| `proxyConfiguration` | Object | No | `{"useApifyProxy": false}` | Apify Proxy configuration. Recommended for large-scale runs. |
+| Parameter            | Type    | Required | Default                    | Description                                                                                               |
+| -------------------- | ------- | -------- | -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `url`                | String  | No       | —                          | Any Dice.fm URL (browse, event, artist, or venue page). Defaults to New York browse page if not provided. |
+| `results_wanted`     | Integer | No       | `100`                      | Maximum number of events to collect.                                                                      |
+| `max_pages`          | Integer | No       | `10`                       | Maximum number of pages to visit for pagination.                                                          |
+| `proxyConfiguration` | Object  | No       | `{"useApifyProxy": false}` | Apify Proxy configuration. Recommended for large-scale runs.                                              |
 
 ---
 
@@ -50,26 +53,26 @@ Monitor event schedules for specific venues or promoters. Analyze event frequenc
 
 Each item in the dataset contains (null fields are automatically excluded):
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `event_name` | String | Name of the event |
-| `status` | String | Ticket status (e.g., "on-sale", "sold-out") |
-| `date` | String | Event start date (YYYY-MM-DD) |
-| `date_end` | String | Event end date (YYYY-MM-DD) |
-| `venue_name` | String | Venue name |
-| `venue_address` | String | Full venue address |
-| `city` | String | City name |
-| `country` | String | Country name |
-| `price_from` | String | Starting price with currency symbol (e.g., "$38.17") |
-| `currency` | String | Currency code (e.g., "USD", "GBP", "EUR") |
-| `artists` | Array | List of performing artist names |
-| `presented_by` | String | Promoter or organizer name |
-| `category` | String | Event category (e.g., "DJ", "Gigs", "Comedy") |
-| `image_url` | String | Event image URL |
-| `event_url` | String | Full Dice.fm event page URL |
-| `ticket_types` | Array | Available ticket tiers with names, prices, and status |
-| `max_tickets` | Number | Maximum tickets per order |
-| `description` | String | Event description text |
+| Field           | Type   | Description                                           |
+| --------------- | ------ | ----------------------------------------------------- |
+| `event_name`    | String | Name of the event                                     |
+| `status`        | String | Ticket status (e.g., "on-sale", "sold-out")           |
+| `date`          | String | Event start date (YYYY-MM-DD)                         |
+| `date_end`      | String | Event end date (YYYY-MM-DD)                           |
+| `venue_name`    | String | Venue name                                            |
+| `venue_address` | String | Full venue address                                    |
+| `city`          | String | City name                                             |
+| `country`       | String | Country name                                          |
+| `price_from`    | String | Starting price with currency symbol (e.g., "$38.17")  |
+| `currency`      | String | Currency code (e.g., "USD", "GBP", "EUR")             |
+| `artists`       | Array  | List of performing artist names                       |
+| `presented_by`  | String | Promoter or organizer name                            |
+| `category`      | String | Event category (e.g., "DJ", "Gigs", "Comedy")         |
+| `image_url`     | String | Event image URL                                       |
+| `event_url`     | String | Full Dice.fm event page URL                           |
+| `ticket_types`  | Array  | Available ticket tiers with names, prices, and status |
+| `max_tickets`   | Number | Maximum tickets per order                             |
+| `description`   | String | Event description text                                |
 
 ---
 
@@ -105,17 +108,6 @@ Extract full details for a specific event:
 {
     "url": "https://dice.fm/event/6dadr3-unreal-x-rush-12th-sep-knockdown-center-new-york-tickets",
     "results_wanted": 1
-}
-```
-
-### Search by Keyword
-
-Search for events by artist or genre name:
-
-```json
-{
-    "keyword": "techno",
-    "results_wanted": 20
 }
 ```
 
@@ -166,20 +158,25 @@ Collect events from multiple pages with proxy:
 ## Tips for Best Results
 
 ### Use Direct URLs
+
 Paste the exact Dice.fm URL for the most reliable results. Browse pages, event pages, artist pages, and venue pages are all supported.
 
 ### Popular City Slugs
+
 - **New York**: `new_york-5bbf4db0f06331478e9b2c59`
 - **London**: `london-54d8a23438fe5d27d500001c`
 - **Berlin**: `berlin-5e426dbb749e68e3e923d1e4`
 
 ### Genre Filters
+
 Append `/music/dj`, `/music/gig`, `/music/party`, `/culture/comedy`, `/culture/sport`, or `/culture/theatre` to any browse URL to filter by genre.
 
 ### Optimize Collection Size
+
 Start with 10-20 results for testing, then increase for production runs. Use `max_pages` to control how many pages the scraper visits.
 
 ### Use Proxy for Large Runs
+
 Enable Apify Proxy (residential recommended) when collecting large datasets to ensure consistent results.
 
 ---
@@ -209,24 +206,31 @@ Download data in multiple formats:
 ## Frequently Asked Questions
 
 ### How many events can I collect?
+
 The scraper can collect all available events for a city or search. Most cities have 20-100 upcoming events. Use `results_wanted` to set your limit.
 
 ### Which cities are supported?
+
 All cities available on Dice.fm are supported — including major cities across the UK, Europe, USA, and Australia. Just paste the Dice.fm browse URL for any city.
 
 ### Can I scrape event details like full descriptions?
+
 Yes, event detail pages include full descriptions, lineup information, ticket types, and more. Just provide the event URL directly.
 
 ### What if an event is sold out?
+
 The scraper captures the event status (e.g., "on-sale", "sold-out") so you can filter results accordingly.
 
 ### How often should I run this?
+
 For monitoring new events, running daily or weekly is recommended. Use Apify Schedules to automate recurring runs.
 
 ### Can I filter by date?
+
 The scraper collects all events from the browse page. You can filter the output dataset by date after collection.
 
 ### Does it work with artist and venue pages?
+
 Yes! Provide any Dice.fm artist page URL (`/artist/...`) or venue page URL (`/venue/...`) to collect all their upcoming events.
 
 ---
