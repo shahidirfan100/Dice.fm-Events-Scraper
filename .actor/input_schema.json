@@ -1,0 +1,55 @@
+{
+  "title": "Dice.fm Events Scraper",
+  "description": "Scrape events from Dice.fm. Provide a Dice.fm URL, or use keyword/location to discover events. Supports browse, event, artist, and venue pages.",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "url": {
+      "title": "Dice.fm URL",
+      "type": "string",
+      "description": "Paste any Dice.fm URL (browse, event, artist, or venue page). If provided, keyword and location are ignored.",
+      "editor": "textfield",
+      "prefill": "https://dice.fm/browse/new_york-5bbf4db0f06331478e9b2c59"
+    },
+    "keyword": {
+      "title": "Search Keyword",
+      "type": "string",
+      "description": "Search for events by keyword (artist name, event name, genre, etc). Filters results from the browse page. Used only when URL is not provided.",
+      "editor": "textfield"
+    },
+    "location": {
+      "title": "Location (City Name or Slug)",
+      "type": "string",
+      "description": "City name (e.g., 'London', 'Berlin') or full slug (e.g., 'new_york-5bbf4db0f06331478e9b2c59'). Used only when URL and keyword are not provided.",
+      "editor": "textfield"
+    },
+    "results_wanted": {
+      "title": "Max Results",
+      "type": "integer",
+      "description": "Maximum number of events to collect.",
+      "minimum": 1,
+      "default": 20,
+      "prefill": 20,
+      "editor": "number"
+    },
+    "max_pages": {
+      "title": "Max Pages",
+      "type": "integer",
+      "description": "Maximum number of pages to visit (pagination limit).",
+      "minimum": 1,
+      "default": 10,
+      "editor": "number"
+    },
+    "proxyConfiguration": {
+      "title": "Proxy Configuration",
+      "type": "object",
+      "description": "Configure Apify Proxy (recommended for large runs or to avoid rate limiting).",
+      "editor": "proxy",
+      "default": {
+        "useApifyProxy": false
+      }
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

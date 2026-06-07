@@ -1,0 +1,58 @@
+{
+  "actorSpecification": 1,
+  "fields": {},
+  "views": {
+    "overview": {
+      "title": "Events Overview",
+      "transformation": {
+        "fields": [
+          "event_name",
+          "date",
+          "venue_name",
+          "city",
+          "price_from",
+          "status",
+          "artists",
+          "event_url"
+        ]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "event_name": {
+            "label": "Event",
+            "format": "text"
+          },
+          "date": {
+            "label": "Date",
+            "format": "text"
+          },
+          "venue_name": {
+            "label": "Venue",
+            "format": "text"
+          },
+          "city": {
+            "label": "City",
+            "format": "text"
+          },
+          "price_from": {
+            "label": "Price From",
+            "format": "text"
+          },
+          "status": {
+            "label": "Status",
+            "format": "text"
+          },
+          "artists": {
+            "label": "Artists",
+            "format": "text"
+          },
+          "event_url": {
+            "label": "URL",
+            "format": "link"
+          }
+        }
+      }
+    }
+  }
+}
